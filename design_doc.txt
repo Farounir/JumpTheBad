@@ -1,1 +1,11 @@
-How does this game work? Type stuff here
+GAMEPLAY
+
+	Main character is Badman
+	Stationary on left side of screen
+	Bads (obstacles) move from right to left
+
+CODE LAYOUT
+
+	lcdChar[][] holds custom icons for Badman, bads, etc.
+		custChar array type holds 8 hex values to define an icon 5x7 pixel layout
+		lcdChar array holds custChars
