@@ -74,11 +74,11 @@ const uint8_t MAN_SLIDE = 7;
 // initialize the LCD library with the numbers of the interface pins
 
 // This line of code is for standard LCD interface:
-// LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
+LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
 
 // And these two are for SPI interface using http://www.ladyada.net/products/i2cspilcdbackpack/:
-#include <Wire.h>
-LiquidCrystal lcd(12, 13, 11);
+// #include <Wire.h>
+// LiquidCrystal lcd(12, 13, 11);
 
 void setup() {
 	// start serial for debugglin'
