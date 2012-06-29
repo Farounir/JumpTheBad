@@ -8,4 +8,5 @@ CODE LAYOUT
 
 	lcdChar[][] holds custom icons for Badman, bads, etc.
 		custChar array type holds 8 hex values to define an icon 5x7 pixel layout
+			Custom icons can be made at http://www.quinapalus.com/hd44780udg.html
 		lcdChar array holds custChars
