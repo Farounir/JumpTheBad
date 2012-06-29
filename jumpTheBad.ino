@@ -184,7 +184,4 @@ void loop() {
 
 /*void increment(); //increments everything in the lcdChar array over one to simulate movement
 void updateDisplay(); //method to update the display to the state of the lcdChar array
-bool isAlive(); //returns if the man is alive or not
-int buttonState(); //returns current state of the button
-int lastState(); //returns last know state
 */  
