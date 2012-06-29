@@ -16,18 +16,20 @@
  * LCD D7 pin to digital pin 2
  * LCD R/W pin to ground
  * Jump pushbutton switch to pin 6 and ground
+ * Duck pushbutton switch to pin 7 and ground
  * wiper to LCD VO pin (pin 3)
  */
 
 // include the lcd library code:
 #include <LiquidCrystal.h>
 
-// CONSTANTS
+// CONSTANTS: HARDCORE, YO
 const int DELAY_TIME = 1;
-const int JUMPIN = 6;  // pin to read for sweet jumping action!
-const int WIDTH = 16;  // number of lcd characters long
-const int HEIGHT = 2;  // number of lcd characters high
-const int MS_PER_TICK = 250; // ms per tick
+const int JUMPIN = 6;          // pin to read for sweet jumping action!
+const int DUCKPIN = 7;         // pin to read for fantastic ducking happenings!
+const int WIDTH = 16;          // number of lcd characters long
+const int HEIGHT = 2;          // number of lcd characters high
+const int MS_PER_TICK = 250;   // ms per tick
 
 // Globals... cause if pacman did it, we can too!
 int buttonState;     // variable for reading the button
@@ -82,10 +84,12 @@ void setup() {
 	// start serial for debugglin'
 	Serial.begin(115200);
 
-	// setup jump button as input with internal pullup resistor
-	// NOTE: grounding pin 6 to pull low will signal switch is triggered
+	// setup jump and duck buttons as input with internal pullup resistor
+	// NOTE: grounding pin 6 or 7 to low will trigger switch.
 	pinMode(JUMPIN, INPUT);
 	digitalWrite(JUMPIN, HIGH);
+	pinMode(DUCKPIN, INPUT);
+	digitalWrite(DUCKPIN, HIGH);
 	
 	// set up the LCD's number of columns and rows: 
 	lcd.begin(16, 2);
