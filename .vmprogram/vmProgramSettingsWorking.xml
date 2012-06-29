@@ -1,8 +1,0 @@
-<VisualMicro>
-  <Program Name="jumpTheBad" Ext=".ino" Location="G:\Programming\arduino-1.0.1\sketches\jumpTheBad" IncludeDebugInformation="0">
-    <Compile IsCompiled="0" CompilerErrors="0" StopOnError="False" OptimiseLibs="True" OptimiseCore="True" BuildPath="C:\Users\Owner\AppData\Local\VMicro\Arduino\Builds\jumpTheBad\uno" />
-    <Platform Name="Arduino">
-      <Board Name="uno" Description="Arduino Uno" CoreFolder="G:\Programming\arduino-1.0.1\hardware\arduino\cores\arduino" VariantFullPath="G:\Programming\arduino-1.0.1\hardware\arduino\variants\standard" />
-    </Platform>
-  </Program>
-</VisualMicro>
