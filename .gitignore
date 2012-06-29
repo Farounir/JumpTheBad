@@ -6,3 +6,4 @@
 *.vcxproj.filters
 *.vcxproj.user
 *.vsarduino.h
+*.ipch
