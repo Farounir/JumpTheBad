@@ -59,16 +59,16 @@ const uint8_t MAN_TOP= 2;
 custChar MAN_LAND_A = {0xe,0xe,0x14,0xe,0x5,0xe,0x9,0x00};      // we have landing: left arm up, legs to right
 const uint8_t MAN_LAND = 3;                                     // This also can be used as a pre slide
 
-custChar OBS0_A = {0x0,0x0,0x4,0xa,0x15,0xa,0x15,0x00};         // generic obstacle: spike pointing up
+custChar OBS0_A = {0x0,0x4,0x4,0xe,0xe,0x1f,0x1f};              // generic obstacle: spike pointing up
 const uint8_t OBS0 = 4;
 
-custChar OBS_BOT_A = {0x15,0xa,0xa,0x0,0x0,0x0,0x0,0x00};       // better duck bro
+custChar OBS_BOT_A = {0x15,0x11,0x0,0x0,0x0,0x0,0x0};           // better duck bro: bottom part of obstacle, no man underneath
 const uint8_t OBS_BOT = 5;
 
-custChar OBS_TOP_A = {0x0,0x4,0xa,0x1f,0x1f,0x15,0xa,0x00};     // top obstacle
+custChar OBS_TOP_A = {0x1f,0x15,0x1f,0x15,0x1f,0x15,0x15};      // top part of obstacle, attaches to OBS_BOT
 const uint8_t OBS_TOP = 6;
 
-custChar MAN_SLIDE_A = {0x15,0xa,0xa,0x0,0x1a,0x1f,0x1a,0x00};  // slide
+custChar MAN_SLIDE_A = {0x15,0x11,0x0,0x18,0x18,0x6,0xb};       // sliiiide to the right: bottom part of obstacle, with man underneath
 const uint8_t MAN_SLIDE = 7;
 
 // initialize the LCD library with the numbers of the interface pins
@@ -126,7 +126,7 @@ void setup() {
 	
 	lcd.setCursor(0,0);
 	//lcd.print("Jump the Bad!");
-	delay(50000);
+	delay(9999999);
 	lcd.clear();
 }
 
