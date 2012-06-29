@@ -30,52 +30,53 @@ const int HEIGHT = 2;  // number of lcd characters high
 const int MS_PER_TICK = 250; // ms per tick
 
 // Globals... cause if pacman did it, we can too!
-int buttonState;  // variable for reading the button
-int lastButton;  // keeps track of the last state of the button
-bool alive; // keeps track of whether man is alive or not i.e. if game goes on
-int manPos; // keeps track if man is standing, jumping up, has jumped, or is landing using an int 0-4
-long lastTick = 0; // last time the clock ticked in ms
-int state = 0; // state of jumping demo animation
-int numStates = 5; // number of states in the demo
+int buttonState;     // variable for reading the button
+int lastButton;      // keeps track of the last state of the button
+bool alive;          // keeps track of whether man is alive or not i.e. if game goes on
+int manPos;          // keeps track if man is standing, jumping up, has jumped, or is landing using an int 0-4
+long lastTick = 0;   // last time the clock ticked in ms
+int state = 0;       // state of jumping demo animation
+int numStates = 5;   // number of states in the demo
 
-const int numChar = 8; // the number of characters needed to create a custom lcd character
+const int numChar = 8;              // the number of hex bytes needed to create a custom 5x7 lcd character
 typedef uint8_t custChar[numChar];
 
-custChar lcdChar[WIDTH][HEIGHT]; //a 2d array that holds cust characters and is used to keep track of game state
+custChar lcdChar[WIDTH][HEIGHT];    //a 2d array that holds cust characters and is used to keep track of game state
 
-//custom graphics!!!!1!!!11!
+// custom graphics!!!!1!!!11!
 
-custChar MAN_A = {0xe,0xe,0x4,0xe,0x15,0xe,0x1b,0x00};      // standing man: both arms and legs down
+custChar MAN_A = {0xe,0xe,0x4,0xe,0x15,0xe,0x1b,0x00};          // standing man: both arms and legs down
 const uint8_t MAN = 0;
 
-custChar MAN_JUMP_A = {0xe,0xe,0x5,0xe,0x14,0xe,0x12,0x00}; // starting to jump: right arm up, legs to left
-const uint8_t MAN_JUMP = 1;                                 // This also can be used as an after slide
+custChar MAN_JUMP_A = {0xe,0xe,0x5,0xe,0x14,0xe,0x12,0x00};     // starting to jump: right arm up, legs to left
+const uint8_t MAN_JUMP = 1;                                     // This also can be used as an after slide
 
-
-custChar MAN_TOP_A = {0xe,0xe,0x15,0xe,0x4,0xe,0x11,0x00};  // spread eagle: both arms and legs up
+custChar MAN_TOP_A = {0xe,0xe,0x15,0xe,0x4,0xe,0x11,0x00};      // spread eagle: both arms and legs up
 const uint8_t MAN_TOP= 2;
 
-custChar MAN_LAND_A = {0xe,0xe,0x14,0xe,0x5,0xe,0x9,0x00};  // we have landing: left arm up, legs to right
-const uint8_t MAN_LAND = 3;                                 // This also can be used as a pre slide
+custChar MAN_LAND_A = {0xe,0xe,0x14,0xe,0x5,0xe,0x9,0x00};      // we have landing: left arm up, legs to right
+const uint8_t MAN_LAND = 3;                                     // This also can be used as a pre slide
 
-custChar OBS0_A = {0x0,0x0,0x4,0xa,0x15,0xa,0x15,0x00};      // generic obstacle: spike pointing up
+custChar OBS0_A = {0x0,0x0,0x4,0xa,0x15,0xa,0x15,0x00};         // generic obstacle: spike pointing up
 const uint8_t OBS0 = 4;
 
-custChar OBS_BOT_A = {0x15,0xa,0xa,0x0,0x0,0x0,0x0,0x00};  // better duck bro
+custChar OBS_BOT_A = {0x15,0xa,0xa,0x0,0x0,0x0,0x0,0x00};       // better duck bro
 const uint8_t OBS_BOT = 5;
 
-custChar OBS_TOP_A = {0x0,0x4,0xa,0x1f,0x1f,0x15,0xa,0x00};  //top obstical
+custChar OBS_TOP_A = {0x0,0x4,0xa,0x1f,0x1f,0x15,0xa,0x00};     // top obstacle
 const uint8_t OBS_TOP = 6;
 
 custChar MAN_SLIDE_A = {0x15,0xa,0xa,0x0,0x1a,0x1f,0x1a,0x00};  // slide
 const uint8_t MAN_SLIDE = 7;
 
-// initialize the library with the numbers of the interface pins
+// initialize the LCD library with the numbers of the interface pins
+
 // This line of code is for standard LCD interface:
 LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
+
 // And these two are for SPI interface using http://www.ladyada.net/products/i2cspilcdbackpack/:
-	// #include <Wire.h>
-	// LiquidCrystal lcd(12, 13, 11);
+// #include <Wire.h>
+// LiquidCrystal lcd(12, 13, 11);
 
 void setup() {
 	// start serial for debugglin'
