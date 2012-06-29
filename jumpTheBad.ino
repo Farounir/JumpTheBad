@@ -37,7 +37,7 @@ int lastButton;      // keeps track of the last state of the button
 bool alive;          // keeps track of whether man is alive or not i.e. if game goes on
 int manPos;          // keeps track if man is standing, jumping up, has jumped, or is landing using an int 0-4
 long lastTick = 0;   // last time the clock ticked in ms
-int state = 0;       // state of jumping demo animation
+int state = -1;       // state of jumping demo animation
 int numStates = 5;   // number of states in the demo
 
 const int numChar = 8;              // the number of hex bytes needed to create a custom 5x7 lcd character
@@ -74,11 +74,11 @@ const uint8_t MAN_SLIDE = 7;
 // initialize the LCD library with the numbers of the interface pins
 
 // This line of code is for standard LCD interface:
-LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
+// LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
 
 // And these two are for SPI interface using http://www.ladyada.net/products/i2cspilcdbackpack/:
-// #include <Wire.h>
-// LiquidCrystal lcd(12, 13, 11);
+#include <Wire.h>
+LiquidCrystal lcd(12, 13, 11);
 
 void setup() {
 	// start serial for debugglin'
@@ -126,7 +126,7 @@ void setup() {
 	
 	lcd.setCursor(0,0);
 	//lcd.print("Jump the Bad!");
-	delay(9999999);
+	delay(3000);
 	lcd.clear();
 }
 
@@ -154,40 +154,62 @@ void displayState() {
 	lcd.clear();
 	switch (state) {
 		case 0:
-			lcd.setCursor(8,1);
+			/* diagram:
+			 *  #
+			 * O^
+			 */
+			lcd.setCursor(1, 1);
 			lcd.write(MAN);
-			lcd.setCursor(9,1);
-			lcd.write(OBS0);
-			delay(DELAY_TIME);
+			lcd.setCursor(2, 0);
+			lcd.write(OBS_TOP);
+			lcd.setCursor(2, 1);
+			lcd.write(OBS_BOT);
 			break;
 		case 1:
-			lcd.setCursor(8,1);
-			lcd.write(MAN_JUMP);
-			lcd.setCursor(9,1);
-			lcd.write(OBS0);
-			delay(DELAY_TIME);
+			/* diagram:
+			 *  #
+			 * o^
+			 */
+			lcd.setCursor(1, 1);
+			lcd.write(MAN_LAND);
+			lcd.setCursor(2, 0);
+			lcd.write(OBS_TOP);
+			lcd.setCursor(2, 1);
+			lcd.write(OBS_BOT);
 			break;
 		case 2:
-			lcd.setCursor(8,0);
-			lcd.write(MAN_TOP);
-			lcd.setCursor(8,1);
-			lcd.write(OBS0);
-			delay(DELAY_TIME);
+			/* diagram:
+			 *  #
+			 *  A
+			 */
+			lcd.setCursor(2, 0);
+			lcd.write(OBS_TOP);
+			lcd.setCursor(2, 1);
+			lcd.write(MAN_SLIDE);
 			break;
 		case 3:
-			lcd.setCursor(8,1);
-			lcd.write(MAN_LAND);
-			lcd.setCursor(7,1);
-			lcd.write(OBS0);
-			delay(DELAY_TIME);
+			/* diagram:
+			 *  #
+			 *  ^o
+			 */
+			lcd.setCursor(3, 1);
+			lcd.write(MAN_JUMP);
+			lcd.setCursor(2, 0);
+			lcd.write(OBS_TOP);
+			lcd.setCursor(2, 1);
+			lcd.write(OBS_BOT);
 			break;
 		case 4:
-			lcd.clear();
-			lcd.setCursor(8,1);
+			/* diagram:
+			 *  #
+			 *  ^O
+			 */
+			lcd.setCursor(3, 1);
 			lcd.write(MAN);
-			lcd.setCursor(7,1);
-			lcd.write(OBS0);
-			delay(DELAY_TIME);
+			lcd.setCursor(2, 0);
+			lcd.write(OBS_TOP);
+			lcd.setCursor(2, 1);
+			lcd.write(OBS_BOT);
 			break;
 	}
 
