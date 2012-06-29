@@ -34,11 +34,12 @@ int lastButton;  // keeps track of the last state of the button
 bool alive; // keeps track of whether man is alive or not i.e. if game goes on
 int manPos; // keeps track if man is standing, jumping up, has jumped, or is landing using an int 0-4
 
-uint8_t lcdChar[WIDTH][HEIGHT]; //a 2d array that holds cust characters and is used to keep track of game state
-
-//custom graphics!!!!1!!!11!
 const int numChar = 8; // the number of characters needed to create a custom lcd character
 typedef uint8_t custChar[numChar];
+
+custChar lcdChar[WIDTH][HEIGHT]; //a 2d array that holds cust characters and is used to keep track of game state
+
+//custom graphics!!!!1!!!11!
 
 custChar MAN_A = {0xe,0xe,0x4,0xe,0x15,0xe,0x1b,0x00};      // standing man: both arms and legs down
 const uint8_t MAN = 0;
