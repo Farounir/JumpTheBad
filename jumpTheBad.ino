@@ -49,19 +49,26 @@ custChar MAN_A = {0xe,0xe,0x4,0xe,0x15,0xe,0x1b,0x00};      // standing man: bot
 const uint8_t MAN = 0;
 
 custChar MAN_JUMP_A = {0xe,0xe,0x5,0xe,0x14,0xe,0x12,0x00}; // starting to jump: right arm up, legs to left
-const uint8_t MAN_JUMP = 1;
+const uint8_t MAN_JUMP = 1;                                 // This also can be used as an after slide
+
 
 custChar MAN_TOP_A = {0xe,0xe,0x15,0xe,0x4,0xe,0x11,0x00};  // spread eagle: both arms and legs up
 const uint8_t MAN_TOP= 2;
 
 custChar MAN_LAND_A = {0xe,0xe,0x14,0xe,0x5,0xe,0x9,0x00};  // we have landing: left arm up, legs to right
-const uint8_t MAN_LAND = 3;
+const uint8_t MAN_LAND = 3;                                 // This also can be used as a pre slide
 
-custChar OBS_A = {0x0,0x0,0x4,0xa,0x15,0xa,0x15,0x00};      // generic obstacle: spike pointing up
-const uint8_t OBS = 4;
+custChar OBS0_A = {0x0,0x0,0x4,0xa,0x15,0xa,0x15,0x00};      // generic obstacle: spike pointing up
+const uint8_t OBS0 = 4;
 
-custChar MAN_DEAD_A = {0x0,0x0,0x0,0x0,0x18,0x19,0x1f,0x00};  // it's dead, Jim!
-const uint8_t MAN_DEAD = 5;
+custChar OBS_BOT_A = {0x15,0xa,0xa,0x0,0x0,0x0,0x0,0x00};  // better duck bro
+const uint8_t OBS_BOT = 5;
+
+custChar OBS_TOP_A = {0x0,0x4,0xa,0x1f,0x1f,0x15,0xa,0x00};  //top obstical
+const uint8_t OBS_TOP = 6;
+
+custChar MAN_SLIDE_A = {0x15,0xa,0xa,0x0,0x1a,0x1f,0x1a,0x00};  // slide
+const uint8_t MAN_SLIDE = 7;
 
 // initialize the library with the numbers of the interface pins
 // This line of code is for standard LCD interface:
@@ -87,7 +94,10 @@ void setup() {
 	lcd.createChar(MAN_JUMP, MAN_JUMP_A);
 	lcd.createChar(MAN_TOP, MAN_TOP_A);
 	lcd.createChar(MAN_LAND, MAN_LAND_A);
-	lcd.createChar(OBS, OBS_A);
+	lcd.createChar(OBS0, OBS0_A);
+	lcd.createChar(OBS_TOP, OBS_TOP_A);
+	lcd.createChar(OBS_BOT, OBS_BOT_A);
+	lcd.createChar(MAN_SLIDE, MAN_SLIDE_A);
 	
 	lcd.clear();
 	lcd.setCursor(0,1);
@@ -99,18 +109,24 @@ void setup() {
 	lcd.setCursor(3,1);
 	lcd.write(MAN_LAND);
 	lcd.setCursor(4,1);
-	lcd.write(OBS);
+	lcd.write(OBS0);
+	lcd.setCursor(5,0);
+	lcd.write(OBS_TOP);
+	lcd.setCursor(5,1);
+	lcd.write(OBS_BOT);
+	lcd.setCursor(6,0);
+	lcd.write(OBS_TOP);
+	lcd.setCursor(6,1);
+	lcd.write(MAN_SLIDE);
 	
 	lcd.setCursor(0,0);
-	lcd.print("Jump the Bad!");
-	delay(2000);
+	//lcd.print("Jump the Bad!");
+	delay(50000);
 	lcd.clear();
 }
 
 void loop() {
-
 	checkTime();
-
 }
 
 void checkTime() {
@@ -136,28 +152,28 @@ void displayState() {
 			lcd.setCursor(8,1);
 			lcd.write(MAN);
 			lcd.setCursor(9,1);
-			lcd.write(OBS);
+			lcd.write(OBS0);
 			delay(DELAY_TIME);
 			break;
 		case 1:
 			lcd.setCursor(8,1);
 			lcd.write(MAN_JUMP);
 			lcd.setCursor(9,1);
-			lcd.write(OBS);
+			lcd.write(OBS0);
 			delay(DELAY_TIME);
 			break;
 		case 2:
 			lcd.setCursor(8,0);
 			lcd.write(MAN_TOP);
 			lcd.setCursor(8,1);
-			lcd.write(OBS);
+			lcd.write(OBS0);
 			delay(DELAY_TIME);
 			break;
 		case 3:
 			lcd.setCursor(8,1);
 			lcd.write(MAN_LAND);
 			lcd.setCursor(7,1);
-			lcd.write(OBS);
+			lcd.write(OBS0);
 			delay(DELAY_TIME);
 			break;
 		case 4:
@@ -165,7 +181,7 @@ void displayState() {
 			lcd.setCursor(8,1);
 			lcd.write(MAN);
 			lcd.setCursor(7,1);
-			lcd.write(OBS);
+			lcd.write(OBS0);
 			delay(DELAY_TIME);
 			break;
 	}
