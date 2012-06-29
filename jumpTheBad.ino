@@ -23,16 +23,20 @@
 #include <LiquidCrystal.h>
 
 // CONSTANTS
-const int DELAY_TIME = 200;
+const int DELAY_TIME = 1;
 const int JUMPIN = 6;  // pin to read for sweet jumping action!
 const int WIDTH = 16;  // number of lcd characters long
 const int HEIGHT = 2;  // number of lcd characters high
+const int MS_PER_TICK = 250; // ms per tick
 
 // Globals... cause if pacman did it, we can too!
 int buttonState;  // variable for reading the button
 int lastButton;  // keeps track of the last state of the button
 bool alive; // keeps track of whether man is alive or not i.e. if game goes on
 int manPos; // keeps track if man is standing, jumping up, has jumped, or is landing using an int 0-4
+long lastTick = 0; // last time the clock ticked in ms
+int state = 0; // state of jumping demo animation
+int numStates = 5; // number of states in the demo
 
 const int numChar = 8; // the number of characters needed to create a custom lcd character
 typedef uint8_t custChar[numChar];
@@ -60,9 +64,16 @@ custChar MAN_DEAD_A = {0x0,0x0,0x0,0x0,0x18,0x19,0x1f,0x00};  // it's dead, Jim!
 const uint8_t MAN_DEAD = 5;
 
 // initialize the library with the numbers of the interface pins
+// This line of code is for standard LCD interface:
 LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
+// And these two are for SPI interface using http://www.ladyada.net/products/i2cspilcdbackpack/:
+	// #include <Wire.h>
+	// LiquidCrystal lcd(12, 13, 11);
 
 void setup() {
+	// start serial for debugglin'
+	Serial.begin(115200);
+
 	// setup jump button as input with internal pullup resistor
 	// NOTE: grounding pin 6 to pull low will signal switch is triggered
 	pinMode(JUMPIN, INPUT);
@@ -97,92 +108,66 @@ void setup() {
 }
 
 void loop() {
-	/*lcd.setCursor(0,1);
-	lcd.write(MAN);
 
-	lcd.setCursor(1,1);
-	lcd.write(MAN_JUMP);
+	checkTime();
 
-	lcd.setCursor(2,0);
-	lcd.write(MAN_JUMP);
-
-	lcd.setCursor(3,0);
-	lcd.write(MAN_TOP);
-
-	lcd.setCursor(3,1);
-	lcd.write(OBS);
-
-	lcd.setCursor(4,0);
-	lcd.write(MAN_LAND);
-
-	lcd.setCursor(5,1);
-	lcd.write(MAN_LAND);
-
-	lcd.setCursor(6,1);
-	lcd.write(MAN);
-	delay(200);
-	lcd.clear();*/
-
-
-
-
-	lcd.setCursor(8,1);
-	lcd.write(MAN);
-	lcd.setCursor(9,1);
-	lcd.write(OBS);
-	delay(DELAY_TIME);
-	lcd.clear();
-
-	lcd.setCursor(8,1);
-	lcd.write(MAN_JUMP);
-	lcd.setCursor(9,1);
-	lcd.write(OBS);
-	delay(DELAY_TIME);
-	lcd.clear();
-
-	/*lcd.setCursor(8,0);
-	lcd.write(MAN_JUMP);
-	lcd.setCursor(9,1);
-	lcd.write(OBS);
-	delay(DELAY_TIME);
-	lcd.clear();
-
-	lcd.setCursor(8,0);
-	lcd.write(MAN_JUMP);
-	lcd.setCursor(8,1);
-	lcd.write(OBS);
-	delay(DELAY_TIME);
-	lcd.clear();*/
-
-	lcd.setCursor(8,0);
-	lcd.write(MAN_TOP);
-	lcd.setCursor(8,1);
-	lcd.write(OBS);
-	delay(DELAY_TIME);
-	lcd.clear();
-
-	/*lcd.setCursor(8,0);
-	lcd.write(MAN_LAND);
-	lcd.setCursor(8,1);
-	lcd.write(OBS);
-	delay(DELAY_TIME);
-	lcd.clear();*/
-
-	lcd.setCursor(8,1);
-	lcd.write(MAN_LAND);
-	lcd.setCursor(7,1);
-	lcd.write(OBS);
-	delay(DELAY_TIME);
-	lcd.clear();
-
-	lcd.setCursor(8,1);
-	lcd.write(MAN);
-	lcd.setCursor(7,1);
-	lcd.write(OBS);
-	delay(DELAY_TIME);
-	lcd.clear();
 }
 
-/*void increment(); //increments everything in the lcdChar array over one to simulate movement
-void updateDisplay(); //method to update the display to the state of the lcdChar array
-*/  
+void checkTime() {
+	if (millis() > lastTick + MS_PER_TICK) {
+		Serial.print("Tick! Time (ms): ");
+		Serial.println(millis());
+		lastTick = millis();
+		
+		incrementState();
+		displayState();
+	}
+}
+
+void incrementState() {
+	state++;
+	if (state == numStates) { state = 0; }
+}
+
+void displayState() {
+	lcd.clear();
+	switch (state) {
+		case 0:
+			lcd.setCursor(8,1);
+			lcd.write(MAN);
+			lcd.setCursor(9,1);
+			lcd.write(OBS);
+			delay(DELAY_TIME);
+			break;
+		case 1:
+			lcd.setCursor(8,1);
+			lcd.write(MAN_JUMP);
+			lcd.setCursor(9,1);
+			lcd.write(OBS);
+			delay(DELAY_TIME);
+			break;
+		case 2:
+			lcd.setCursor(8,0);
+			lcd.write(MAN_TOP);
+			lcd.setCursor(8,1);
+			lcd.write(OBS);
+			delay(DELAY_TIME);
+			break;
+		case 3:
+			lcd.setCursor(8,1);
+			lcd.write(MAN_LAND);
+			lcd.setCursor(7,1);
+			lcd.write(OBS);
+			delay(DELAY_TIME);
+			break;
+		case 4:
+			lcd.clear();
+			lcd.setCursor(8,1);
+			lcd.write(MAN);
+			lcd.setCursor(7,1);
+			lcd.write(OBS);
+			delay(DELAY_TIME);
+			break;
+	}
+
+}
