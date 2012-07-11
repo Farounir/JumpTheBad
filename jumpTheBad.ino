@@ -21,6 +21,7 @@
  */
 
 // include the lcd library code:
+#include <Wire.h> // some variants of lcd library require Wire.h
 #include <LiquidCrystal.h>
 
 // CONSTANTS: HARDCORE, YO
@@ -50,25 +51,25 @@ custChar lcdChar[WIDTH][HEIGHT];    //a 2d array that holds cust characters and 
 custChar MAN_A = {0xe,0xe,0x4,0xe,0x15,0xe,0x1b,0x00};          // standing man: both arms and legs down
 const uint8_t MAN = 0;
 
-custChar MAN_JUMP_A = {0xe,0xe,0x5,0xe,0x14,0xe,0x12,0x00};     // starting to jump: right arm up, legs to left
+custChar MAN_JUMP_A = {0xe,0xe,0x5,0xe,0x14,0xe,0x12,0x10};     // starting to jump: right arm up, legs to left
 const uint8_t MAN_JUMP = 1;                                     // This also can be used as an after slide
 
 custChar MAN_TOP_A = {0xe,0xe,0x15,0xe,0x4,0xe,0x11,0x00};      // spread eagle: both arms and legs up
 const uint8_t MAN_TOP= 2;
 
-custChar MAN_LAND_A = {0xe,0xe,0x14,0xe,0x5,0xe,0x9,0x00};      // we have landing: left arm up, legs to right
+custChar MAN_LAND_A = {0xe,0xe,0x14,0xe,0x5,0xe,0x9,0x1};      // we have landing: left arm up, legs to right
 const uint8_t MAN_LAND = 3;                                     // This also can be used as a pre slide
 
-custChar OBS0_A = {0x0,0x4,0x4,0xe,0xe,0x1f,0x1f};              // generic obstacle: spike pointing up
+custChar OBS0_A = {0x0,0x4,0x4,0xe,0xe,0x1f,0x1f,0x1f};              // generic obstacle: spike pointing up
 const uint8_t OBS0 = 4;
 
 custChar OBS_BOT_A = {0x15,0x11,0x0,0x0,0x0,0x0,0x0};           // better duck bro: bottom part of obstacle, no man underneath
 const uint8_t OBS_BOT = 5;
 
-custChar OBS_TOP_A = {0x1f,0x15,0x1f,0x15,0x1f,0x15,0x15};      // top part of obstacle, attaches to OBS_BOT
+custChar OBS_TOP_A = {0x1f,0x15,0x1f,0x15,0x1f,0x15,0x15,0x15};      // top part of obstacle, attaches to OBS_BOT
 const uint8_t OBS_TOP = 6;
 
-custChar MAN_SLIDE_A = {0x15,0x11,0x0,0x18,0x18,0x6,0xb};       // sliiiide to the right: bottom part of obstacle, with man underneath
+custChar MAN_SLIDE_A = {0x15,0x11,0x0,0x18,0x18,0x6,0xb,0x1};       // sliiiide to the right: bottom part of obstacle, with man underneath
 const uint8_t MAN_SLIDE = 7;
 
 // initialize the LCD library with the numbers of the interface pins
@@ -90,6 +91,13 @@ void setup() {
 	digitalWrite(JUMPIN, HIGH);
 	pinMode(DUCKPIN, INPUT);
 	digitalWrite(DUCKPIN, HIGH);
+
+	pinMode(12, OUTPUT);
+	pinMode(11, OUTPUT);
+	pinMode(5, OUTPUT);
+	pinMode(4, OUTPUT);
+	pinMode(3, OUTPUT);
+	pinMode(2, OUTPUT);
 	
 	// set up the LCD's number of columns and rows: 
 	lcd.begin(16, 2);
