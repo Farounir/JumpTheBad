@@ -88,7 +88,7 @@ LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
 // LiquidCrystal lcd(12, 13, 11);
 
 void setup() {
-	
+
 	// start serial for debugglin'
 	Serial.begin(115200);
 
@@ -176,81 +176,5 @@ void checkTime() {
 		
 		incrementState();
 		displayState();
-		/*
-		if (manState == 0) //he is standing) {
-			
-		*/
 	}
-}
-
-void incrementState() {
-	state++;
-	if (state == numStates) { 
-		state = 0; //resets state if all states have been touched
-	}
-}
-
-void displayState() {
-	lcd.clear();
-	switch (state) {
-		case 0:
-			/* diagram:
-			 *  #
-			 * O^
-			 */
-			lcd.setCursor(1, 1);
-			lcd.write(MAN);
-			lcd.setCursor(2, 0);
-			lcd.write(OBS_TOP);
-			lcd.setCursor(2, 1);
-			lcd.write(OBS_BOT);
-			break;
-		case 1:
-			/* diagram:
-			 *  #
-			 * o^
-			 */
-			lcd.setCursor(1, 1);
-			lcd.write(MAN_LAND);
-			lcd.setCursor(2, 0);
-			lcd.write(OBS_TOP);
-			lcd.setCursor(2, 1);
-			lcd.write(OBS_BOT);
-			break;
-		case 2:
-			/* diagram:
-			 *  #
-			 *  A
-			 */
-			lcd.setCursor(2, 0);
-			lcd.write(OBS_TOP);
-			lcd.setCursor(2, 1);
-			lcd.write(MAN_SLIDE);
-			break;
-		case 3:
-			/* diagram:
-			 *  #
-			 *  ^o
-			 */
-			lcd.setCursor(3, 1);
-			lcd.write(MAN_JUMP);
-			lcd.setCursor(2, 0);
-			lcd.write(OBS_TOP);
-			lcd.setCursor(2, 1);
-			lcd.write(OBS_BOT);
-			break;
-		case 4:
-			/* diagram:
-			 *  #
-			 *  ^O
-			 */
-			lcd.setCursor(3, 1);
-			lcd.write(MAN);
-			lcd.setCursor(2, 0);
-			lcd.write(OBS_TOP);
-			lcd.setCursor(2, 1);
-			lcd.write(OBS_BOT);
-			break;
-	}
-
 }
