@@ -30,27 +30,32 @@ const int JUMPIN = 6;          // pin to read for sweet jumping action!
 const int DUCKPIN = 7;         // pin to read for fantastic ducking happenings!
 const int WIDTH = 16;          // number of lcd characters long`
 const int HEIGHT = 2;          // number of lcd characters high
-const int MS_PER_TICK = 250;   // ms per tick
 const int NUM_CHAR = 8;        // the number of hex bytes needed to create a custom 5x7 lcd character
 const uint8_t BLANK = 254;     // uint8 code of a blank character
 
 
 // Globals... cause if pacman did it, we can too!
-int buttonState0;    // variable for reading the button
-int lastButton0;     // keeps track of the last state of the button
-int buttonState1;    // variable for reading the button
-int lastButton1;     // keeps track of the last state of the button
-bool alive;          // keeps track of whether man is alive or not i.e. if game goes on
+int buttonState0;              // variable for reading the button
+int lastButton0;               // keeps track of the last state of the button
+int buttonState1;              // variable for reading the button
+int lastButton1;               // keeps track of the last state of the button
+bool alive;                    // keeps track of whether man is alive or not i.e. if game goes on
 
-int manState = 0;    // 0 means standing, 1 means in the process of jumping, and 2 means in the process of ducking
-int jumpState = 0;   // 0 means not jumping/standing, 1 means heading up, 2 means top, 3 means heading down
-int duckState = 0;   // 0 means not ducking/standing, 1 means heading down, 2 means ducking all the way, 3 means heading back up
+int manState = 0;              // 0 means standing, 1 means in the process of jumping, and 2 means in the process of ducking
+int jumpState = 0;             // 0 means not jumping/standing, 1 means heading up, 2 means top, 3 means heading down
+int duckState = 0;             // 0 means not ducking/standing, 1 means heading down, 2 means ducking all the way, 3 means heading back up
 
-long lastTick = 0;   // last time the clock ticked in ms
+int ms_per_stage_tick = 250;   // every x ms, the stage moves left
+long lastTick = 0;             // last time the clock ticked in ms
+
+uint8_t stageData[16] = {0};
+const uint8_t OBS_NONE  = 0;
+const uint8_t OBS_SPIKE = 1;
+const uint8_t OBS_GATE  = 2;
+
+
 
 typedef uint8_t custChar[NUM_CHAR];
-
-uint8_t lcdChar[WIDTH][HEIGHT];    //a 2d array that holds cust characters and is used to keep track of game state
 
 // custom graphics!!!!1!!!11!
 
@@ -77,6 +82,9 @@ const uint8_t OBS_TOP = 6;
 
 custChar MAN_SLIDE_A = {0x15,0x11,0x0,0x18,0x18,0x6,0xb,0x1};        // sliiiide to the right: bottom part of obstacle, with man underneath
 const uint8_t MAN_SLIDE = 7;
+
+
+
 
 // initialize the LCD library with the numbers of the interface pins
 
@@ -107,6 +115,7 @@ void setup() {
 	// display the symbols used in the game for 3 seconds, then clear
 	showSymbols();
 
+	Serial.println("Ready to go!");
 }
 
 void loop() {
@@ -169,12 +178,40 @@ void showSymbols() {
 }
 
 void checkTime() {
-	if (millis() > lastTick + MS_PER_TICK) {
-		Serial.print("Tick! Time (ms): ");
-		Serial.println(millis());
+	if (millis() > lastTick + ms_per_stage_tick) {
+		// Serial.print("Tick! Time (ms): ");
+		// Serial.println(millis());
 		lastTick = millis();
 		
-		incrementState();
-		displayState();
+		shiftStage();
+		dispStage();
+	}
+}
+
+void shiftStage() {
+	// shift everything on the stage to the left:
+	// 1 ... 15 -> 0 ... 14
+	for (int i = 1; i < WIDTH; i++) {
+		stageData[i-1] = stageData[i];
+	}
+	// generate an obstacle at far right (position 15)
+	rndMakeObstacle();
+}
+
+void dispStage() {
+	for (int i = 0; i < WIDTH; i++) {
+		Serial.print(stageData[i]);
+	}
+	Serial.println();
+}
+
+void rndMakeObstacle() {
+	int rnd = random(20); // generates numbers from 0 to 19
+	if (rnd == 0) { // 5% chance
+		stageData[15] = OBS_SPIKE;
+	} else if (rnd == 1) {
+		stageData[15] = OBS_GATE;
+	} else {
+		stageData[15] = OBS_NONE;
 	}
 }
