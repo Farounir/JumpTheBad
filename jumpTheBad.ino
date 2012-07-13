@@ -25,13 +25,12 @@
 #include <LiquidCrystal.h>
 
 // CONSTANTS: HARDCORE, YO
-const int DELAY_TIME = 1;
 const int JUMPIN = 6;          // pin to read for sweet jumping action!
 const int DUCKPIN = 7;         // pin to read for fantastic ducking happenings!
 const int WIDTH = 16;          // number of lcd characters long`
 const int HEIGHT = 2;          // number of lcd characters high
 const int NUM_CHAR = 8;        // the number of hex bytes needed to create a custom 5x7 lcd character
-const uint8_t BLANK = 254;     // uint8 code of a blank character
+const uint8_t LCD_BLANK = 254; // uint8 code of a blank character
 
 
 // Globals... cause if pacman did it, we can too!
@@ -41,11 +40,20 @@ int buttonState1;              // variable for reading the button
 int lastButton1;               // keeps track of the last state of the button
 bool alive;                    // keeps track of whether man is alive or not i.e. if game goes on
 
-int manState = 0;              // 0 means standing, 1 means in the process of jumping, and 2 means in the process of ducking
-int jumpState = 0;             // 0 means not jumping/standing, 1 means heading up, 2 means top, 3 means heading down
-int duckState = 0;             // 0 means not ducking/standing, 1 means heading down, 2 means ducking all the way, 3 means heading back up
+int manState = 0;
+/* manState is important, as it defines what the player is doing and what he can do
+ * States:
+ *     0: standing
+ *     1: preparing to jump
+ *     2: in air
+ *     3: coming down from jump
+ *     4: preparing to duck
+ *     5: ducking under gate
+ *     6: straightening up from duck
+ */
+int lastManState = 0;          // only redraw man if his state changes
 
-int ms_per_stage_tick = 250;   // every x ms, the stage moves left
+int ms_per_stage_tick = 100;   // every x ms, the stage moves left
 long lastTick = 0;             // last time the clock ticked in ms
 
 uint8_t stageData[16] = {0};
@@ -59,29 +67,29 @@ typedef uint8_t custChar[NUM_CHAR];
 
 // custom graphics!!!!1!!!11!
 
-custChar MAN_A = {0xe,0xe,0x4,0xe,0x15,0xe,0x1b,0x00};               // standing man: both arms and legs down
-const uint8_t MAN = 0;
+custChar LCD_MAN_DATA = {0xe,0xe,0x4,0xe,0x15,0xe,0x1b,0x00};               // standing man: both arms and legs down
+const uint8_t LCD_MAN = 0;
 
-custChar MAN_JUMP_A = {0xe,0xe,0x5,0xe,0x14,0xe,0x12,0x10};          // starting to jump: right arm up, legs to left
-const uint8_t MAN_JUMP = 1;                                          // This also can be used as an after slide
+custChar LCD_MAN_JUMP_DATA = {0xe,0xe,0x5,0xe,0x14,0xe,0x12,0x10};          // starting to jump: right arm up, legs to left
+const uint8_t LCD_MAN_JUMP = 1;                                             // This also can be used as an after slide
 
-custChar MAN_TOP_A = {0xe,0xe,0x15,0xe,0x4,0xe,0x11,0x00};           // spread eagle: both arms and legs up
-const uint8_t MAN_TOP= 2;
+custChar LCD_MAN_TOP_DATA = {0xe,0xe,0x15,0xe,0x4,0xe,0x11,0x00};           // spread eagle: both arms and legs up
+const uint8_t LCD_MAN_TOP= 2;
 
-custChar MAN_LAND_A = {0xe,0xe,0x14,0xe,0x5,0xe,0x9,0x1};            // we have landing: left arm up, legs to right
-const uint8_t MAN_LAND = 3;                                          // This also can be used as a pre slide
+custChar LCD_MAN_LAND_DATA = {0xe,0xe,0x14,0xe,0x5,0xe,0x9,0x1};            // we have landing: left arm up, legs to right
+const uint8_t LCD_MAN_LAND = 3;                                             // This also can be used as a pre slide
 
-custChar OBS0_A = {0x0,0x4,0x4,0xe,0xe,0x1f,0x1f,0x1f};              // generic obstacle: spike pointing up
-const uint8_t OBS0 = 4;
+custChar LCD_SPIKE_DATA = {0x0,0x4,0x4,0xe,0xe,0x1f,0x1f,0x1f};         // generic obstacle: spike pointing up
+const uint8_t LCD_SPIKE = 4;
 
-custChar OBS_BOT_A = {0x15,0x11,0x0,0x0,0x0,0x0,0x0};                // better duck bro: bottom part of obstacle, no man underneath
-const uint8_t OBS_BOT = 5;
+custChar LCD_GATE_BOT_DATA = {0x15,0x11,0x0,0x0,0x0,0x0,0x0};           // better duck bro: bottom part of obstacle, no man underneath
+const uint8_t LCD_GATE_BOT = 5;
 
-custChar OBS_TOP_A = {0x1f,0x15,0x1f,0x15,0x1f,0x15,0x15,0x15};      // top part of obstacle, attaches to OBS_BOT
-const uint8_t OBS_TOP = 6;
+custChar LCD_GATE_TOP_DATA = {0x1f,0x15,0x1f,0x15,0x1f,0x15,0x15,0x15}; // top part of obstacle, attaches to OBS_BOT
+const uint8_t LCD_GATE_TOP = 6;
 
-custChar MAN_SLIDE_A = {0x15,0x11,0x0,0x18,0x18,0x6,0xb,0x1};        // sliiiide to the right: bottom part of obstacle, with man underneath
-const uint8_t MAN_SLIDE = 7;
+custChar LCD_MAN_SLIDE_DATA = {0x15,0x11,0x0,0x18,0x18,0x6,0xb,0x1};        // sliiiide to the right: bottom part of obstacle, with man underneath
+const uint8_t LCD_MAN_SLIDE = 7;
 
 
 
@@ -141,36 +149,36 @@ void setupPins() {
 
 void initChars() {
 	// init all the custom characters
-	lcd.createChar(MAN, MAN_A);
-	lcd.createChar(MAN_JUMP, MAN_JUMP_A);
-	lcd.createChar(MAN_TOP, MAN_TOP_A);
-	lcd.createChar(MAN_LAND, MAN_LAND_A);
-	lcd.createChar(OBS0, OBS0_A);
-	lcd.createChar(OBS_TOP, OBS_TOP_A);
-	lcd.createChar(OBS_BOT, OBS_BOT_A);
-	lcd.createChar(MAN_SLIDE, MAN_SLIDE_A);
+	lcd.createChar(LCD_MAN, LCD_MAN_DATA);
+	lcd.createChar(LCD_MAN_JUMP, LCD_MAN_JUMP_DATA);
+	lcd.createChar(LCD_MAN_TOP, LCD_MAN_TOP_DATA);
+	lcd.createChar(LCD_MAN_LAND, LCD_MAN_LAND_DATA);
+	lcd.createChar(LCD_SPIKE, LCD_SPIKE_DATA);
+	lcd.createChar(LCD_GATE_TOP, LCD_GATE_TOP_DATA);
+	lcd.createChar(LCD_GATE_BOT, LCD_GATE_BOT_DATA);
+	lcd.createChar(LCD_MAN_SLIDE, LCD_MAN_SLIDE_DATA);
 }
 
 void showSymbols() {
 	lcd.clear();
 	lcd.setCursor(0,1);
-	lcd.write(MAN);
+	lcd.write(LCD_MAN);
 	lcd.setCursor(1,1);
-	lcd.write(MAN_JUMP);
+	lcd.write(LCD_MAN_JUMP);
 	lcd.setCursor(2,1);
-	lcd.write(MAN_TOP);
+	lcd.write(LCD_MAN_TOP);
 	lcd.setCursor(3,1);
-	lcd.write(MAN_LAND);
+	lcd.write(LCD_MAN_LAND);
 	lcd.setCursor(4,1);
-	lcd.write(OBS0);
+	lcd.write(LCD_SPIKE);
 	lcd.setCursor(5,0);
-	lcd.write(OBS_TOP);
+	lcd.write(LCD_GATE_TOP);
 	lcd.setCursor(5,1);
-	lcd.write(OBS_BOT);
+	lcd.write(LCD_GATE_BOT);
 	lcd.setCursor(6,0);
-	lcd.write(OBS_TOP);
+	lcd.write(LCD_GATE_TOP);
 	lcd.setCursor(6,1);
-	lcd.write(MAN_SLIDE);
+	lcd.write(LCD_MAN_SLIDE);
 	
 	lcd.setCursor(0,0);
 	delay(3000);
@@ -179,13 +187,15 @@ void showSymbols() {
 
 void checkTime() {
 	if (millis() > lastTick + ms_per_stage_tick) {
-		// Serial.print("Tick! Time (ms): ");
-		// Serial.println(millis());
 		lastTick = millis();
-		
+		moveMan();
 		shiftStage();
 		dispStage();
 	}
+}
+
+void moveMan() {
+	
 }
 
 void shiftStage() {
@@ -199,10 +209,35 @@ void shiftStage() {
 }
 
 void dispStage() {
+	// draw obstacles
 	for (int i = 0; i < WIDTH; i++) {
 		Serial.print(stageData[i]);
+		switch (stageData[i]) {
+			case OBS_NONE:
+				lcd.setCursor(i, 0);
+				lcd.write(LCD_BLANK);
+				lcd.setCursor(i, 1);
+				lcd.write(LCD_BLANK);
+				break;
+			case OBS_SPIKE:
+				lcd.setCursor(i, 0);
+				lcd.write(LCD_BLANK);
+				lcd.setCursor(i, 1);
+				lcd.write(LCD_SPIKE);
+				break;
+			case OBS_GATE:
+				lcd.setCursor(i, 0);
+				lcd.write(LCD_GATE_TOP);
+				lcd.setCursor(i, 1);
+				lcd.write(LCD_GATE_BOT);
+				break;
+		}
 	}
 	Serial.println();
+
+	// draw man
+	lcd.setCursor(0, 1);
+	lcd.write(LCD_MAN);
 }
 
 void rndMakeObstacle() {
