@@ -21,6 +21,7 @@
  */
 
 // include the lcd library code:
+#include <Wire.h> // some variants of lcd library require Wire.h
 #include <LiquidCrystal.h>
 
 // CONSTANTS: HARDCORE, YO
@@ -104,6 +105,13 @@ void setup() {
 	digitalWrite(JUMPIN, HIGH);
 	pinMode(DUCKPIN, INPUT);
 	digitalWrite(DUCKPIN, HIGH);
+
+	pinMode(12, OUTPUT);
+	pinMode(11, OUTPUT);
+	pinMode(5, OUTPUT);
+	pinMode(4, OUTPUT);
+	pinMode(3, OUTPUT);
+	pinMode(2, OUTPUT);
 	
 	// set up the LCD's number of columns and rows: 
 	lcd.begin(16, 2);
