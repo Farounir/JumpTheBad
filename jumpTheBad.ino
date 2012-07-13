@@ -35,10 +35,24 @@ const int DUCKPIN = 7;         // pin to read for fantastic ducking happenings!
 const int WIDTH = 16;          // width in chars of lcd screen
 const int HEIGHT = 2;          // height in chars of lcd screen
 const int NUM_CHAR = 8;        // the number of hex bytes needed to create a custom 5x8 lcd character
-const uint8_t LCD_BLANK = 254; // uint8 code of a blank character
-const int TICKS_BTWN_OBSTACLES = 4;
 
+const int MS_PER_STAGE_TICK = 120;        // every x ms, the stage moves left
+const int TICKS_TILL_SPEEDUP = 30;        // every x ticks, speed up the game
+const int SPEEDUP_AMOUNT = 8;             // speed up by this many ticks
+const int CHG_TICKS_TILL_SPEEDUP = 5;     // increase ticksTillSpeedup by this much each time the game speeds up
+const int LAST_TICK_SPEEDUP = 0;          // last tick at which the speed increased
 
+long currTick = 0;
+int ticksTillSpeedup = TICKS_TILL_SPEEDUP;
+int lastTickSpeedup = LAST_TICK_SPEEDUP;
+int msPerStageTick = MS_PER_STAGE_TICK;
+
+const int MIN_TICKS_BTWN_OBSTACLES = 4;   // cooldown time before another obstacle can be spawned
+const int MAX_TICKS_BTWN_OBSTACLES = 10;  // longest time game will wait between two obstacles
+const int TICKS_PER_JUMP = 2;             // hang time per jump, in ticks
+const int MAX_TICKS_DUCKING = 3;          // max amount of time man can duck before standing up again
+
+long lastObstacleTick = 0;
 
 // Globals... cause if pacman did it, we can too!
 
@@ -61,11 +75,16 @@ const uint8_t MAN_POST_DUCK = 5;
 
 uint8_t lastManState = -1;     // only redraw man if his state changes
 bool obstaclePassed = false;   // redraws man manually after each obstacle
+bool doPostDuck = false;       // after each gate, do a post-duck recovery to normal
+
+bool manRunningDisp = false;   // toggle two display states to show the man "running"
+
+int jumpTimer = 0;             // keeps track of how far into the jump's hangtime the man is
+int duckTimer = 0;             // keeps track of how long the man has been ducking
 
 int obstacleCooldown = false;  // doesn't draw obstacles too close to each other
 
-int ms_per_stage_tick = 100;   // every x ms, the stage moves left
-long lastTick = 0;             // last time the clock ticked in ms
+long lastTickMs = 0;           // last time the clock ticked in ms
 
 uint8_t stageData[WIDTH] = {0}; // holds the stage obstacle data
 const uint8_t OBS_NONE  = 0;
@@ -74,11 +93,13 @@ const uint8_t OBS_GATE  = 2;
 
 
 
+const uint8_t LCD_BLANK = 254; // uint8 code of a blank character
+
 typedef uint8_t custChar[NUM_CHAR];
 
 // custom graphics!!!!1!!!11!
 
-custChar LCD_MAN_DATA = {0xe,0xe,0x4,0xe,0x15,0xe,0x1b,0x00};               // standing man: both arms and legs down
+custChar LCD_MAN_DATA = {0xe,0xe,0x4,0x1e,0x5,0xe,0x1b,0x0};                // standing man: both arms and legs down
 const uint8_t LCD_MAN = 0;
 
 custChar LCD_MAN_JUMP_DATA = {0xe,0xe,0x5,0xe,0x14,0xe,0x12,0x10};          // starting to jump: right arm up, legs to left
@@ -152,11 +173,18 @@ void loop() {
 }
 
 void reInitGame() {
-	manState = 0;
+	// reset to standing
+	manState = MAN_STANDING;
 	lastManState = -1;
+	// clear stage
 	for (int i = 0; i < WIDTH; i++) {
 		stageData[i] = 0;
 	}
+	// reset game ticks
+	currTick = 0;
+	msPerStageTick = MS_PER_STAGE_TICK;
+	ticksTillSpeedup = 30;
+	lastTickSpeedup = 0;
 }
 
 void setupPins() {
@@ -210,13 +238,21 @@ void showSymbols() {
 	lcd.write(LCD_MAN_SLIDE);
 	
 	lcd.setCursor(0,0);
-	delay(3000);
+	delay(2000);
 	lcd.clear();
 }
 
 void checkTime() {
-	if (millis() > lastTick + ms_per_stage_tick) {
-		lastTick = millis();
+	if (millis() > lastTickMs + msPerStageTick) {
+		lastTickMs = millis();
+		currTick++;
+
+		if (currTick >= ticksTillSpeedup + lastTickSpeedup) {
+			msPerStageTick -= CHG_TICKS_TILL_SPEEDUP;
+			ticksTillSpeedup += CHG_TICKS_TILL_SPEEDUP;
+			lastTickSpeedup = currTick;
+		}
+
 		readButtons();
 		drawMan();
 		shiftStage();
@@ -230,19 +266,36 @@ void readButtons() {
 	btnDuck.update();
 	if (btnJump.fallingEdge()) {
 		Serial.println("Jump pressed.");
-		manState = MAN_JUMP;
+		// only jump if man is ready to jump (standing or just finished jumping/ducking)
+		if (manState == MAN_STANDING ||
+			manState == MAN_POST_JUMP ||
+			manState == MAN_POST_DUCK) {
+			manState = MAN_PRE_JUMP;	
+		}
 	}
 	if (btnJump.risingEdge()) {
 		Serial.println("Jump released.");
-		manState = MAN_STANDING;
+		// only land if man was jumping
+		if (manState == MAN_JUMP) {
+			manState = MAN_POST_JUMP;
+		}
 	}
 	if (btnDuck.fallingEdge()) {
 		Serial.println("Duck pressed.");
-		manState = MAN_DUCK;
+		// only duck if man is ready to duck (standing or just finished jumping/ducking)
+		if (manState == MAN_STANDING ||
+			manState == MAN_POST_JUMP ||
+			manState == MAN_POST_DUCK) {
+			manState = MAN_DUCK;
+			duckTimer = MAX_TICKS_DUCKING;
+		}
 	}
 	if (btnDuck.risingEdge()) {
 		Serial.println("Duck released.");
-		manState = MAN_STANDING;
+		// only stand if man was ducking
+		if (manState == MAN_DUCK) {
+			manState = MAN_STANDING;	
+		}
 	}
 }
 
@@ -288,7 +341,7 @@ void dispStage() {
 
 void checkCollide() {
 	if (stageData[0] == OBS_SPIKE) {
-		if (manState != MAN_JUMP) {
+		if (manState != MAN_JUMP && manState != MAN_POST_JUMP) {
 			doCollide(OBS_SPIKE);
 		} else {
 			obstaclePassed = true;
@@ -300,6 +353,7 @@ void checkCollide() {
 			doCollide(OBS_GATE);
 		} else {
 			obstaclePassed = true;
+			doPostDuck = true;
 			lcd.setCursor(0, 1);
 			lcd.write(LCD_MAN_SLIDE);
 		}
@@ -320,14 +374,63 @@ void doCollide(uint8_t typeObstacle) {
 }
 
 void drawMan() {
-	if (manState != lastManState || obstaclePassed) { // man state has changed, redraw man
+
+	// if man was starting to jump last tick, make him jump and set the hang timer
+	if (lastManState == MAN_PRE_JUMP) {
+		manState = MAN_JUMP;
+		jumpTimer = TICKS_PER_JUMP;
+	}
+
+	// if man is in the air, check the hang time
+	if (manState == MAN_JUMP) {
+		if (jumpTimer == 0) {
+			manState = MAN_POST_JUMP;
+		} else {
+			jumpTimer--;
+		}
+	}
+
+	// if man was landing last tick, make him standing
+	if (lastManState == MAN_POST_JUMP) {
+		manState = MAN_STANDING;
+	}
+
+	// if man just passed under a gate, finish the slide
+	if (doPostDuck) {
+		doPostDuck = false;
+		manState = MAN_POST_DUCK;
+	}
+
+	// if man is ducking, check the duck timer and stand him up if duck has been held too long
+	if (lastManState == MAN_DUCK) {
+		if (duckTimer == 0) {
+			manState = MAN_STANDING;
+		} else {
+			duckTimer--;
+		}
+	}
+
+	if (lastManState == MAN_POST_DUCK) {
+		manState = MAN_STANDING;
+	}
+
+
+	if (manState == MAN_STANDING ||
+	    manState != lastManState ||
+	    obstaclePassed) { // man state has changed, redraw man
 		lastManState = manState;
 		switch (manState) {
 			case MAN_STANDING:
 				lcd.setCursor(0, 0);
 				lcd.write(LCD_BLANK);
 				lcd.setCursor(0, 1);
-				lcd.write(LCD_MAN);
+				if (manRunningDisp) {
+					lcd.write(LCD_MAN);
+					manRunningDisp = false;
+				} else {
+					lcd.write(LCD_MAN_JUMP);
+					manRunningDisp = true;
+				}
 				break;
 			case MAN_PRE_JUMP:
 				lcd.setCursor(0, 0);
@@ -340,12 +443,16 @@ void drawMan() {
 				lcd.write(LCD_MAN_TOP);
 				lcd.setCursor(0, 1);
 				lcd.write(LCD_BLANK);
+				// super hacky, this handles the edge case where you release jump before the jump even starts
+				if (btnJump.read() == HIGH) {
+					manState = MAN_POST_JUMP;
+				}
 				break;
 			case MAN_POST_JUMP:
 				lcd.setCursor(0, 0);
-				lcd.write(LCD_BLANK);
-				lcd.setCursor(0, 1);
 				lcd.write(LCD_MAN_LAND);
+				lcd.setCursor(0, 1);
+				lcd.write(LCD_BLANK);
 				break;
 			case MAN_DUCK:
 				lcd.setCursor(0, 0);
@@ -370,9 +477,11 @@ void rndMakeObstacle() {
 	} else {
 		int rnd = random(20); // generates numbers from 0 to 19
 		if (rnd == 0) { // 5% chance
+			lastObstacleTick = currTick;
 			obstacleCooldown = TICKS_BTWN_OBSTACLES;
 			stageData[15] = OBS_SPIKE;
 		} else if (rnd == 1) {
+			lastObstacleTick = currTick;
 			obstacleCooldown = TICKS_BTWN_OBSTACLES;
 			stageData[15] = OBS_GATE;
 		} else {
