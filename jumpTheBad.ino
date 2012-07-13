@@ -20,43 +20,54 @@
  * wiper to LCD VO pin (pin 3)
  */
 
+
+
 // include the lcd library code:
 #include <Wire.h> // some variants of lcd library require Wire.h
 #include <LiquidCrystal.h>
+#include <Bounce.h>
+
+
 
 // CONSTANTS: HARDCORE, YO
 const int JUMPIN = 6;          // pin to read for sweet jumping action!
 const int DUCKPIN = 7;         // pin to read for fantastic ducking happenings!
-const int WIDTH = 16;          // number of lcd characters long`
-const int HEIGHT = 2;          // number of lcd characters high
-const int NUM_CHAR = 8;        // the number of hex bytes needed to create a custom 5x7 lcd character
+const int WIDTH = 16;          // width in chars of lcd screen
+const int HEIGHT = 2;          // height in chars of lcd screen
+const int NUM_CHAR = 8;        // the number of hex bytes needed to create a custom 5x8 lcd character
 const uint8_t LCD_BLANK = 254; // uint8 code of a blank character
+const int TICKS_BTWN_OBSTACLES = 4;
+
 
 
 // Globals... cause if pacman did it, we can too!
-int buttonState0;              // variable for reading the button
-int lastButton0;               // keeps track of the last state of the button
-int buttonState1;              // variable for reading the button
-int lastButton1;               // keeps track of the last state of the button
-bool alive;                    // keeps track of whether man is alive or not i.e. if game goes on
 
-int manState = 0;
+uint8_t manState = 0;
 /* manState is important, as it defines what the player is doing and what he can do
  * States:
  *     0: standing
  *     1: preparing to jump
  *     2: in air
  *     3: coming down from jump
- *     4: preparing to duck
- *     5: ducking under gate
- *     6: straightening up from duck
+ *     4: ducking
+ *     5: straightening up from duck
  */
-int lastManState = 0;          // only redraw man if his state changes
+const uint8_t MAN_STANDING  = 0;
+const uint8_t MAN_PRE_JUMP  = 1;
+const uint8_t MAN_JUMP      = 2;
+const uint8_t MAN_POST_JUMP = 3;
+const uint8_t MAN_DUCK      = 4;
+const uint8_t MAN_POST_DUCK = 5;
+
+uint8_t lastManState = -1;     // only redraw man if his state changes
+bool obstaclePassed = false;   // redraws man manually after each obstacle
+
+int obstacleCooldown = false;  // doesn't draw obstacles too close to each other
 
 int ms_per_stage_tick = 100;   // every x ms, the stage moves left
 long lastTick = 0;             // last time the clock ticked in ms
 
-uint8_t stageData[16] = {0};
+uint8_t stageData[WIDTH] = {0}; // holds the stage obstacle data
 const uint8_t OBS_NONE  = 0;
 const uint8_t OBS_SPIKE = 1;
 const uint8_t OBS_GATE  = 2;
@@ -74,18 +85,18 @@ custChar LCD_MAN_JUMP_DATA = {0xe,0xe,0x5,0xe,0x14,0xe,0x12,0x10};          // s
 const uint8_t LCD_MAN_JUMP = 1;                                             // This also can be used as an after slide
 
 custChar LCD_MAN_TOP_DATA = {0xe,0xe,0x15,0xe,0x4,0xe,0x11,0x00};           // spread eagle: both arms and legs up
-const uint8_t LCD_MAN_TOP= 2;
+const uint8_t LCD_MAN_TOP = 2;
 
 custChar LCD_MAN_LAND_DATA = {0xe,0xe,0x14,0xe,0x5,0xe,0x9,0x1};            // we have landing: left arm up, legs to right
 const uint8_t LCD_MAN_LAND = 3;                                             // This also can be used as a pre slide
 
-custChar LCD_SPIKE_DATA = {0x0,0x4,0x4,0xe,0xe,0x1f,0x1f,0x1f};         // generic obstacle: spike pointing up
+custChar LCD_SPIKE_DATA = {0x0,0x4,0x4,0xe,0xe,0x1f,0x1f,0x1f};             // generic obstacle: spike pointing up
 const uint8_t LCD_SPIKE = 4;
 
-custChar LCD_GATE_BOT_DATA = {0x15,0x11,0x0,0x0,0x0,0x0,0x0};           // better duck bro: bottom part of obstacle, no man underneath
+custChar LCD_GATE_BOT_DATA = {0x15,0x11,0x0,0x0,0x0,0x0,0x0};               // better duck bro: bottom part of obstacle, no man underneath
 const uint8_t LCD_GATE_BOT = 5;
 
-custChar LCD_GATE_TOP_DATA = {0x1f,0x15,0x1f,0x15,0x1f,0x15,0x15,0x15}; // top part of obstacle, attaches to OBS_BOT
+custChar LCD_GATE_TOP_DATA = {0x1f,0x15,0x1f,0x15,0x1f,0x15,0x15,0x15};     // top part of obstacle, attaches to OBS_BOT
 const uint8_t LCD_GATE_TOP = 6;
 
 custChar LCD_MAN_SLIDE_DATA = {0x15,0x11,0x0,0x18,0x18,0x6,0xb,0x1};        // sliiiide to the right: bottom part of obstacle, with man underneath
@@ -103,8 +114,15 @@ LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
 // #include <Wire.h>
 // LiquidCrystal lcd(12, 13, 11);
 
-void setup() {
 
+
+// Bounce library, to take care of input buttons
+Bounce btnJump = Bounce(JUMPIN, 5); // 5ms bounce
+Bounce btnDuck = Bounce(DUCKPIN, 5);
+
+
+
+void setup() {
 	// start serial for debugglin'
 	Serial.begin(115200);
 
@@ -115,10 +133,13 @@ void setup() {
 	setupPins();
 	
 	// set up the LCD's number of columns and rows: 
-	lcd.begin(16, 2);
+	lcd.begin(WIDTH, HEIGHT);
 
 	// set up the custom symbols displayed on screen
 	initChars();
+	
+	// reinitialize game, just to make sure everything's ok
+	reInitGame();
 
 	// display the symbols used in the game for 3 seconds, then clear
 	showSymbols();
@@ -128,6 +149,14 @@ void setup() {
 
 void loop() {
 	checkTime();
+}
+
+void reInitGame() {
+	manState = 0;
+	lastManState = -1;
+	for (int i = 0; i < WIDTH; i++) {
+		stageData[i] = 0;
+	}
 }
 
 void setupPins() {
@@ -188,14 +217,33 @@ void showSymbols() {
 void checkTime() {
 	if (millis() > lastTick + ms_per_stage_tick) {
 		lastTick = millis();
-		moveMan();
+		readButtons();
+		drawMan();
 		shiftStage();
 		dispStage();
+		checkCollide();
 	}
 }
 
-void moveMan() {
-	
+void readButtons() {
+	btnJump.update();
+	btnDuck.update();
+	if (btnJump.fallingEdge()) {
+		Serial.println("Jump pressed.");
+		manState = MAN_JUMP;
+	}
+	if (btnJump.risingEdge()) {
+		Serial.println("Jump released.");
+		manState = MAN_STANDING;
+	}
+	if (btnDuck.fallingEdge()) {
+		Serial.println("Duck pressed.");
+		manState = MAN_DUCK;
+	}
+	if (btnDuck.risingEdge()) {
+		Serial.println("Duck released.");
+		manState = MAN_STANDING;
+	}
 }
 
 void shiftStage() {
@@ -214,10 +262,12 @@ void dispStage() {
 		Serial.print(stageData[i]);
 		switch (stageData[i]) {
 			case OBS_NONE:
-				lcd.setCursor(i, 0);
-				lcd.write(LCD_BLANK);
-				lcd.setCursor(i, 1);
-				lcd.write(LCD_BLANK);
+				if (i != 0) { // don't overwrite man with blank
+					lcd.setCursor(i, 0);
+					lcd.write(LCD_BLANK);
+					lcd.setCursor(i, 1);
+					lcd.write(LCD_BLANK);
+				}
 				break;
 			case OBS_SPIKE:
 				lcd.setCursor(i, 0);
@@ -234,19 +284,99 @@ void dispStage() {
 		}
 	}
 	Serial.println();
+}
 
-	// draw man
-	lcd.setCursor(0, 1);
-	lcd.write(LCD_MAN);
+void checkCollide() {
+	if (stageData[0] == OBS_SPIKE) {
+		if (manState != MAN_JUMP) {
+			doCollide(OBS_SPIKE);
+		} else {
+			obstaclePassed = true;
+			lcd.setCursor(0, 0);
+			lcd.write(LCD_MAN_TOP);
+		}
+	} else if (stageData[0] == OBS_GATE) {
+		if (manState != MAN_DUCK) {
+			doCollide(OBS_GATE);
+		} else {
+			obstaclePassed = true;
+			lcd.setCursor(0, 1);
+			lcd.write(LCD_MAN_SLIDE);
+		}
+	}
+}
+
+void doCollide(uint8_t typeObstacle) {
+	Serial.print("Collision: ");
+	if (typeObstacle == OBS_SPIKE) {
+		Serial.println("Spike");
+	} else if (typeObstacle == OBS_GATE) {
+		Serial.println("Gate");
+	} else {
+		Serial.println("Unknown");
+	}
+	delay(10);
+	setup();
+}
+
+void drawMan() {
+	if (manState != lastManState || obstaclePassed) { // man state has changed, redraw man
+		lastManState = manState;
+		switch (manState) {
+			case MAN_STANDING:
+				lcd.setCursor(0, 0);
+				lcd.write(LCD_BLANK);
+				lcd.setCursor(0, 1);
+				lcd.write(LCD_MAN);
+				break;
+			case MAN_PRE_JUMP:
+				lcd.setCursor(0, 0);
+				lcd.write(LCD_BLANK);
+				lcd.setCursor(0, 1);
+				lcd.write(LCD_MAN_JUMP);
+				break;
+			case MAN_JUMP:
+				lcd.setCursor(0, 0);
+				lcd.write(LCD_MAN_TOP);
+				lcd.setCursor(0, 1);
+				lcd.write(LCD_BLANK);
+				break;
+			case MAN_POST_JUMP:
+				lcd.setCursor(0, 0);
+				lcd.write(LCD_BLANK);
+				lcd.setCursor(0, 1);
+				lcd.write(LCD_MAN_LAND);
+				break;
+			case MAN_DUCK:
+				lcd.setCursor(0, 0);
+				lcd.write(LCD_BLANK);
+				lcd.setCursor(0, 1);
+				lcd.write(LCD_MAN_LAND);
+				break;
+			case MAN_POST_DUCK:
+				lcd.setCursor(0, 0);
+				lcd.write(LCD_BLANK);
+				lcd.setCursor(0, 1);
+				lcd.write(LCD_MAN_JUMP);
+				break;
+		}
+	}
 }
 
 void rndMakeObstacle() {
-	int rnd = random(20); // generates numbers from 0 to 19
-	if (rnd == 0) { // 5% chance
-		stageData[15] = OBS_SPIKE;
-	} else if (rnd == 1) {
-		stageData[15] = OBS_GATE;
-	} else {
+	if (obstacleCooldown > 0) {
+		obstacleCooldown--;
 		stageData[15] = OBS_NONE;
+	} else {
+		int rnd = random(20); // generates numbers from 0 to 19
+		if (rnd == 0) { // 5% chance
+			obstacleCooldown = TICKS_BTWN_OBSTACLES;
+			stageData[15] = OBS_SPIKE;
+		} else if (rnd == 1) {
+			obstacleCooldown = TICKS_BTWN_OBSTACLES;
+			stageData[15] = OBS_GATE;
+		} else {
+			stageData[15] = OBS_NONE;
+		}
 	}
 }
