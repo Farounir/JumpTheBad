@@ -348,4 +348,5 @@ void updateMan() {
                 lcdChar[0][1] = MAN_JUMP;
             }
         }
+    }
 }
